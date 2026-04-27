@@ -417,6 +417,47 @@
     color: var(--paper);
   }
 
+  /* Hip PT 3-state cells */
+  .hip-cell {
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid var(--rule);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    font-size: 0.5rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .hip-cell:hover { border-color: var(--ink); }
+
+  .hip-cell.future {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  .hip-cell.hip-5m {
+    background: #b07d2a;
+    border-color: #b07d2a;
+    color: var(--paper);
+  }
+
+  .hip-cell.hip-10m {
+    background: #1a6fa8;
+    border-color: #1a6fa8;
+    color: var(--paper);
+  }
+
+  .hip-cell.hip-15m {
+    background: #2c7a4b;
+    border-color: #2c7a4b;
+    color: var(--paper);
+  }
+
   /* Current week indicator */
   .current-badge {
     font-size: 0.6rem;
@@ -529,6 +570,34 @@
       <div class="alc-cell" data-day="5" onclick="cycleAlc(5)"><span class="alc-label" id="alc-5"></span></div>
       <div class="alc-cell" data-day="6" onclick="cycleAlc(6)"><span class="alc-label" id="alc-6"></span></div>
     </div>
+
+    <div class="habit-row" data-habit="squat">
+      <div class="habit-name"><span class="habit-icon">🦵</span> 60s squats</div>
+      <div class="check-box" data-day="0" onclick="toggleDaily('squat',0)"></div>
+      <div class="check-box" data-day="1" onclick="toggleDaily('squat',1)"></div>
+      <div class="check-box" data-day="2" onclick="toggleDaily('squat',2)"></div>
+      <div class="check-box" data-day="3" onclick="toggleDaily('squat',3)"></div>
+      <div class="check-box" data-day="4" onclick="toggleDaily('squat',4)"></div>
+      <div class="check-box" data-day="5" onclick="toggleDaily('squat',5)"></div>
+      <div class="check-box" data-day="6" onclick="toggleDaily('squat',6)"></div>
+    </div>
+
+    <div class="habit-row diet-row" data-habit="hip">
+      <div class="habit-name"><span class="habit-icon">🩺</span> Hip PT</div>
+      <div class="hip-cell" data-day="0" onclick="cycleHip(0)"><span class="hip-label" id="hip-0"></span></div>
+      <div class="hip-cell" data-day="1" onclick="cycleHip(1)"><span class="hip-label" id="hip-1"></span></div>
+      <div class="hip-cell" data-day="2" onclick="cycleHip(2)"><span class="hip-label" id="hip-2"></span></div>
+      <div class="hip-cell" data-day="3" onclick="cycleHip(3)"><span class="hip-label" id="hip-3"></span></div>
+      <div class="hip-cell" data-day="4" onclick="cycleHip(4)"><span class="hip-label" id="hip-4"></span></div>
+      <div class="hip-cell" data-day="5" onclick="cycleHip(5)"><span class="hip-label" id="hip-5"></span></div>
+      <div class="hip-cell" data-day="6" onclick="cycleHip(6)"><span class="hip-label" id="hip-6"></span></div>
+    </div>
+    <div style="margin-top:0.5rem; padding-bottom:0.25rem;">
+      <a href="https://www.nytimes.com/2025/01/17/well/move/short-mobility-workout.html" target="_blank"
+        style="font-size:0.6rem; color:var(--muted); text-decoration:none; text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid var(--rule);">
+        ↗ nyt mobility workout
+      </a>
+    </div>
   </div>
 
   <!-- Weekly -->
@@ -593,10 +662,12 @@
 </div>
 
 <script>
-  const DAILY_HABITS = ['move', 'exercise', 'stand', 'steps'];
+  const DAILY_HABITS = ['move', 'exercise', 'stand', 'steps', 'squat'];
   const DIET_STATES = [null, 'good', 'meh', 'bad'];
   const ALC_STATES  = [null, 'none', 'one', 'boozer'];
   const ALC_LABELS  = { none: 'none', one: '1 🍺', boozer: '🍺🍺' };
+  const HIP_STATES  = [null, '5m', '10m', '15m'];
+  const HIP_LABELS  = { '5m': '5min', '10m': '10min', '15m': '15min' };
   const WEEKLY_HABITS = {
     lift: 2,
     zone2: 2,
@@ -699,6 +770,17 @@
       cell.textContent = val ? ALC_LABELS[val] : '';
     }
 
+    // Hip PT cells
+    for (let d = 0; d < 7; d++) {
+      const cell = document.getElementById(`hip-${d}`);
+      if (!cell) continue;
+      const parent = cell.parentElement;
+      const val = data.daily['hip']?.[d] || null;
+      const isFuture = isCurrentWeek() && d > todayIdx;
+      parent.className = 'hip-cell' + (val ? ` hip-${val}` : '') + (isFuture ? ' future' : '');
+      cell.textContent = val ? HIP_LABELS[val] : '';
+    }
+
     // Weekly tally
     Object.keys(WEEKLY_HABITS).forEach(habit => {
       const count = WEEKLY_HABITS[habit];
@@ -745,6 +827,15 @@
       else if (alcVal === 'one') done += 0.5;
     }
 
+    // Hip PT: 5m=0.33, 10m=0.67, 15m=1
+    for (let d = 0; d < daysElapsed; d++) {
+      possible++;
+      const hipVal = data.daily['hip']?.[d] || null;
+      if (hipVal === '5m') done += 0.33;
+      else if (hipVal === '10m') done += 0.67;
+      else if (hipVal === '15m') done += 1;
+    }
+
     // Weekly: count as done/possible
     possible += Object.values(WEEKLY_HABITS).reduce((a,b) => a+b, 0);
     Object.keys(WEEKLY_HABITS).forEach(habit => {
@@ -786,6 +877,18 @@
     const current = data.daily['alc'][day] || null;
     const idx = ALC_STATES.indexOf(current);
     data.daily['alc'][day] = ALC_STATES[(idx + 1) % ALC_STATES.length];
+    saveWeek(data);
+    render();
+  }
+
+  function cycleHip(day) {
+    const todayIdx = getTodayDayIndex();
+    if (isCurrentWeek() && day > todayIdx) return;
+    const data = loadWeek();
+    if (!data.daily['hip']) data.daily['hip'] = {};
+    const current = data.daily['hip'][day] || null;
+    const idx = HIP_STATES.indexOf(current);
+    data.daily['hip'][day] = HIP_STATES[(idx + 1) % HIP_STATES.length];
     saveWeek(data);
     render();
   }
