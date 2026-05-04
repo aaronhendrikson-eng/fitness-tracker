@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Fitness Log</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fitness">
+<meta name="theme-color" content="#f5f2eb">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231a1a18'/%3E%3Ctext x='90' y='115' font-size='90' text-anchor='middle' font-family='serif'%3E%F0%9F%92%AA%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a18; --paper: #f5f2eb; --rule: #d4cfc4;
+    --accent: #c0392b; --accent2: #2c7a4b; --amber: #b07d2a;
+    --blue: #1a6fa8; --muted: #8a8578; --check-bg: #1a1a18;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--paper); color: var(--ink); font-family: 'DM Mono', monospace; min-height: 100vh; padding: max(env(safe-area-inset-top), 1.5rem) 1rem max(env(safe-area-inset-bottom), 4rem); }
+  .page { max-width: 480px; margin: 0 auto; }
+
+  .header { border-bottom: 3px solid var(--ink); padding-bottom: 1rem; margin-bottom: 1.5rem; }
+  .title { font-family: 'Playfair Display', serif; font-size: 2rem; letter-spacing: -0.02em; line-height: 1; }
+  .subtitle { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 0.4rem; }
+
+  .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding: 0.75rem 0; border-bottom: 1px solid var(--rule); }
+  .week-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; }
+  .nav-btn { background: none; border: 1px solid var(--ink); color: var(--ink); font-family: 'DM Mono', monospace; font-size: 0.7rem; padding: 0.4rem 0.9rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em; min-height: 44px; }
+  .nav-btn:active { background: var(--ink); color: var(--paper); }
+  .nav-btn:disabled { opacity: 0.3; pointer-events: none; }
+  .current-badge { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-left: 0.5rem; }
+
+  .weight-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.75rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--rule); }
+  .weight-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); flex-shrink: 0; }
+  .weight-input { font-family: 'DM Mono', monospace; font-size: 1.1rem; border: none; border-bottom: 1.5px solid var(--rule); background: transparent; color: var(--ink); width: 80px; padding: 0.1rem 0.2rem; outline: none; }
+  .weight-input:focus { border-color: var(--ink); }
+  .weight-unit { font-size: 0.7rem; color: var(--muted); }
+
+  .section-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 0.75rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--rule); }
+
+  .daily-section { margin-bottom: 2rem; }
+  .day-headers { display: grid; grid-template-columns: 1fr repeat(7, 34px); gap: 3px; margin-bottom: 0.4rem; }
+  .day-header { font-size: 0.6rem; text-align: center; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .day-header.today { color: var(--accent); font-weight: 500; }
+
+  .habit-row { display: grid; grid-template-columns: 1fr repeat(7, 34px); gap: 3px; align-items: center; margin-bottom: 0.5rem; }
+  .habit-name { font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 0.4rem; }
+  .habit-icon { font-size: 0.9rem; flex-shrink: 0; }
+
+  .check-box { width: 34px; height: 34px; border: 1.5px solid var(--rule); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
+  .check-box.checked { background: var(--check-bg); border-color: var(--check-bg); }
+  .check-box.checked::after { content: '✓'; color: var(--paper); font-size: 0.75rem; }
+  .check-box.future { opacity: 0.3; pointer-events: none; }
+
+  /* 3-state cells shared style */
+  .tri-cell { width: 34px; height: 34px; border: 1.5px solid var(--rule); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.46rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; }
+  .tri-cell.future { opacity: 0.3; pointer-events: none; }
+  .tri-cell.state-good   { background: var(--accent2); border-color: var(--accent2); color: var(--paper); }
+  .tri-cell.state-mid    { background: var(--amber);   border-color: var(--amber);   color: var(--paper); }
+  .tri-cell.state-bad    { background: var(--accent);  border-color: var(--accent);  color: var(--paper); }
+
+  .weekly-section { margin-bottom: 2rem; }
+  .weekly-habit { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0; border-bottom: 1px solid var(--rule); }
+  .weekly-habit:last-child { border-bottom: none; }
+  .weekly-left { display: flex; align-items: center; gap: 0.5rem; }
+  .weekly-name { font-size: 0.72rem; }
+  .weekly-target { font-size: 0.6rem; color: var(--muted); }
+  .tally-boxes { display: flex; gap: 4px; }
+  .tally-box { width: 34px; height: 34px; border: 1.5px solid var(--rule); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--muted); }
+  .tally-box.filled { background: var(--check-bg); border-color: var(--check-bg); color: var(--paper); }
+  .tally-box.filled::after { content: '✓'; }
+
+  .tre-section { margin-bottom: 2rem; }
+  .tre-hint { font-size: 0.6rem; color: var(--muted); margin-bottom: 0.75rem; }
+  .tre-grid { display: grid; grid-template-columns: 1fr repeat(7, 34px); gap: 3px; margin-bottom: 0.35rem; align-items: center; }
+  .tre-row-label { font-size: 0.65rem; color: var(--muted); }
+  .tre-cell { width: 34px; height: 34px; border: 1.5px solid var(--rule); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; font-weight: 500; color: var(--muted); }
+  .tre-cell.future { opacity: 0.3; pointer-events: none; }
+  .tre-cell.tre-good { background: var(--accent2); border-color: var(--accent2); color: var(--paper); }
+  .tre-cell.tre-bad  { background: var(--accent);  border-color: var(--accent);  color: var(--paper); }
+  .tre-win-grid { display: grid; grid-template-columns: 1fr repeat(7, 34px); gap: 3px; margin-bottom: 0.5rem; align-items: center; }
+  .tre-win-cell { width: 34px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.45rem; color: var(--muted); }
+  .tre-win-cell.good { color: var(--accent2); font-weight: 500; }
+  .tre-win-cell.bad  { color: var(--accent); font-weight: 500; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,26,24,0.65); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--paper); border: 2px solid var(--ink); padding: 1.5rem; width: 290px; max-width: 92vw; }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 1.15rem; margin-bottom: 0.2rem; }
+  .modal-sub { font-size: 0.62rem; color: var(--muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .time-slots { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 1.25rem; max-height: 200px; overflow-y: auto; }
+  .time-slot { padding: 0.35rem 0.45rem; border: 1px solid var(--rule); font-size: 0.63rem; cursor: pointer; font-family: 'DM Mono', monospace; min-width: 54px; text-align: center; }
+  .time-slot.selected { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; align-items: center; }
+  .modal-btn { font-family: 'DM Mono', monospace; font-size: 0.65rem; padding: 0.4rem 0.9rem; border: 1px solid var(--ink); background: none; color: var(--ink); cursor: pointer; text-transform: uppercase; min-height: 40px; }
+  .modal-btn.primary { background: var(--ink); color: var(--paper); }
+  .clear-link { font-size: 0.6rem; color: var(--muted); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: 'DM Mono', monospace; padding: 0; margin-right: auto; }
+
+  .goals-section { margin-bottom: 2rem; }
+  .goal-row { display: grid; grid-template-columns: 5rem 1fr 4rem 1.6rem; align-items: center; gap: 0.5rem; padding: 0.65rem 0; border-bottom: 1px solid var(--rule); }
+  .goal-row:last-child { border-bottom: none; }
+  .goal-name { font-size: 0.7rem; }
+  .goal-bar-wrap { height: 4px; background: var(--rule); }
+  .goal-bar-fill { height: 100%; transition: width 0.4s ease; }
+  .goal-detail { font-size: 0.56rem; color: var(--muted); text-align: right; }
+  .grade-badge { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; text-align: center; }
+  .grade-A { color: var(--accent2); }
+  .grade-B { color: #4a9e6a; }
+  .grade-C { color: var(--amber); }
+  .grade-D { color: #c87941; }
+  .grade-F { color: var(--accent); }
+  .bar-green  { background: var(--accent2); }
+  .bar-yellow { background: var(--amber); }
+  .bar-red    { background: var(--accent); }
+
+  /* Overall grade */
+  .overall-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 1.25rem; padding-top: 1.25rem; border-top: 3px solid var(--ink);
+  }
+  .overall-label { font-family: 'Playfair Display', serif; font-size: 1rem; }
+  .overall-bar-wrap { flex: 1; height: 6px; background: var(--rule); margin: 0 0.75rem; }
+  .overall-bar-fill { height: 100%; transition: width 0.4s ease; }
+  .overall-grade { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; line-height: 1; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="title">Fitness Log</div>
+    <div class="subtitle">Strength · Endurance · Function</div>
+  </div>
+
+  <div class="week-nav">
+    <button class="nav-btn" id="prevBtn" onclick="changeWeek(-1)">← prev</button>
+    <div>
+      <span class="week-label" id="weekLabel"></span>
+      <span class="current-badge" id="currentBadge"></span>
+    </div>
+    <button class="nav-btn" id="nextBtn" onclick="changeWeek(1)">next →</button>
+  </div>
+
+  <div class="weight-row">
+    <span class="weight-label">Weight</span>
+    <input class="weight-input" type="number" id="weightInput" placeholder="—" step="0.1" inputmode="decimal" oninput="saveWeight()">
+    <span class="weight-unit">lbs</span>
+  </div>
+
+  <!-- Daily Habits -->
+  <div class="daily-section">
+    <div class="section-label">Daily Habits</div>
+    <div class="day-headers">
+      <div></div>
+      <div class="day-header" data-col="0">S</div><div class="day-header" data-col="1">M</div><div class="day-header" data-col="2">T</div><div class="day-header" data-col="3">W</div><div class="day-header" data-col="4">T</div><div class="day-header" data-col="5">F</div><div class="day-header" data-col="6">S</div>
+    </div>
+
+    <div class="habit-row" data-habit="move">
+      <div class="habit-name"><span class="habit-icon" style="color:#c0392b;">●</span> Move</div>
+      <div class="check-box" data-day="0" onclick="toggleDaily('move',0)"></div><div class="check-box" data-day="1" onclick="toggleDaily('move',1)"></div><div class="check-box" data-day="2" onclick="toggleDaily('move',2)"></div><div class="check-box" data-day="3" onclick="toggleDaily('move',3)"></div><div class="check-box" data-day="4" onclick="toggleDaily('move',4)"></div><div class="check-box" data-day="5" onclick="toggleDaily('move',5)"></div><div class="check-box" data-day="6" onclick="toggleDaily('move',6)"></div>
+    </div>
+    <div class="habit-row" data-habit="exercise">
+      <div class="habit-name"><span class="habit-icon" style="color:#2c7a4b;">●</span> Exercise</div>
+      <div class="check-box" data-day="0" onclick="toggleDaily('exercise',0)"></div><div class="check-box" data-day="1" onclick="toggleDaily('exercise',1)"></div><div class="check-box" data-day="2" onclick="toggleDaily('exercise',2)"></div><div class="check-box" data-day="3" onclick="toggleDaily('exercise',3)"></div><div class="check-box" data-day="4" onclick="toggleDaily('exercise',4)"></div><div class="check-box" data-day="5" onclick="toggleDaily('exercise',5)"></div><div class="check-box" data-day="6" onclick="toggleDaily('exercise',6)"></div>
+    </div>
+    <div class="habit-row" data-habit="stand">
+      <div class="habit-name"><span class="habit-icon" style="color:#1a6fa8;">●</span> Stand</div>
+      <div class="check-box" data-day="0" onclick="toggleDaily('stand',0)"></div><div class="check-box" data-day="1" onclick="toggleDaily('stand',1)"></div><div class="check-box" data-day="2" onclick="toggleDaily('stand',2)"></div><div class="check-box" data-day="3" onclick="toggleDaily('stand',3)"></div><div class="check-box" data-day="4" onclick="toggleDaily('stand',4)"></div><div class="check-box" data-day="5" onclick="toggleDaily('stand',5)"></div><div class="check-box" data-day="6" onclick="toggleDaily('stand',6)"></div>
+    </div>
+    <div class="habit-row" data-habit="steps">
+      <div class="habit-name"><span class="habit-icon">↑</span> 10k steps</div>
+      <div class="check-box" data-day="0" onclick="toggleDaily('steps',0)"></div><div class="check-box" data-day="1" onclick="toggleDaily('steps',1)"></div><div class="check-box" data-day="2" onclick="toggleDaily('steps',2)"></div><div class="check-box" data-day="3" onclick="toggleDaily('steps',3)"></div><div class="check-box" data-day="4" onclick="toggleDaily('steps',4)"></div><div class="check-box" data-day="5" onclick="toggleDaily('steps',5)"></div><div class="check-box" data-day="6" onclick="toggleDaily('steps',6)"></div>
+    </div>
+    <div class="habit-row" data-habit="pt">
+      <div class="habit-name"><span class="habit-icon">🩹</span> PT</div>
+      <div class="check-box" data-day="0" onclick="toggleDaily('pt',0)"></div><div class="check-box" data-day="1" onclick="toggleDaily('pt',1)"></div><div class="check-box" data-day="2" onclick="toggleDaily('pt',2)"></div><div class="check-box" data-day="3" onclick="toggleDaily('pt',3)"></div><div class="check-box" data-day="4" onclick="toggleDaily('pt',4)"></div><div class="check-box" data-day="5" onclick="toggleDaily('pt',5)"></div><div class="check-box" data-day="6" onclick="toggleDaily('pt',6)"></div>
+    </div>
+    <div style="padding:0.4rem 0 0.6rem;">
+      <a href="https://www.nytimes.com/athletic/move" target="_blank" style="font-size:0.65rem;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--rule);letter-spacing:0.05em;">NYT Move ↗</a>
+    </div>
+
+    <div class="habit-row" data-habit="alc">
+      <div class="habit-name"><span class="habit-icon">🍺</span> Alcohol</div>
+      <div class="tri-cell" data-day="0" onclick="cycleAlc(0)"><span id="alc-0"></span></div><div class="tri-cell" data-day="1" onclick="cycleAlc(1)"><span id="alc-1"></span></div><div class="tri-cell" data-day="2" onclick="cycleAlc(2)"><span id="alc-2"></span></div><div class="tri-cell" data-day="3" onclick="cycleAlc(3)"><span id="alc-3"></span></div><div class="tri-cell" data-day="4" onclick="cycleAlc(4)"><span id="alc-4"></span></div><div class="tri-cell" data-day="5" onclick="cycleAlc(5)"><span id="alc-5"></span></div><div class="tri-cell" data-day="6" onclick="cycleAlc(6)"><span id="alc-6"></span></div>
+    </div>
+    <div class="habit-row" data-habit="prot">
+      <div class="habit-name"><span class="habit-icon">🥩</span> Protein</div>
+      <div class="tri-cell" data-day="0" onclick="cycleProt(0)"><span id="prot-0"></span></div><div class="tri-cell" data-day="1" onclick="cycleProt(1)"><span id="prot-1"></span></div><div class="tri-cell" data-day="2" onclick="cycleProt(2)"><span id="prot-2"></span></div><div class="tri-cell" data-day="3" onclick="cycleProt(3)"><span id="prot-3"></span></div><div class="tri-cell" data-day="4" onclick="cycleProt(4)"><span id="prot-4"></span></div><div class="tri-cell" data-day="5" onclick="cycleProt(5)"><span id="prot-5"></span></div><div class="tri-cell" data-day="6" onclick="cycleProt(6)"><span id="prot-6"></span></div>
+    </div>
+  </div>
+
+  <!-- Weekly Targets -->
+  <div class="weekly-section">
+    <div class="section-label">Weekly Targets</div>
+    <div class="weekly-habit">
+      <div class="weekly-left"><span class="habit-icon">🏋</span><div><div class="weekly-name">Lift</div><div class="weekly-target">goal: 2×</div></div></div>
+      <div class="tally-boxes"><div class="tally-box" id="lift-0" onclick="toggleWeekly('lift',0)"></div><div class="tally-box" id="lift-1" onclick="toggleWeekly('lift',1)"></div></div>
+    </div>
+    <div class="weekly-habit">
+      <div class="weekly-left"><span class="habit-icon">🚴</span><div><div class="weekly-name">Zone 2 cardio</div><div class="weekly-target">goal: 1–2×, 30+ min</div></div></div>
+      <div class="tally-boxes"><div class="tally-box" id="zone2-0" onclick="toggleWeekly('zone2',0)"></div><div class="tally-box" id="zone2-1" onclick="toggleWeekly('zone2',1)"></div></div>
+    </div>
+    <div class="weekly-habit">
+      <div class="weekly-left"><span class="habit-icon">⚡</span><div><div class="weekly-name">HIIT</div><div class="weekly-target">goal: 1×</div></div></div>
+      <div class="tally-boxes"><div class="tally-box" id="hiit-0" onclick="toggleWeekly('hiit',0)"></div></div>
+    </div>
+  </div>
+
+  <!-- TRE -->
+  <div class="tre-section">
+    <div class="section-label">Time-Restricted Eating</div>
+    <div class="tre-hint">Goal: first bite ≥ 10am · last bite ≤ 7:30pm · window ≤ 10hrs</div>
+    <div class="day-headers" style="margin-bottom:0.3rem;">
+      <div></div>
+      <div class="day-header" data-col="0">S</div><div class="day-header" data-col="1">M</div><div class="day-header" data-col="2">T</div><div class="day-header" data-col="3">W</div><div class="day-header" data-col="4">T</div><div class="day-header" data-col="5">F</div><div class="day-header" data-col="6">S</div>
+    </div>
+    <div class="tre-grid" id="treFirstRow"><div class="tre-row-label">First bite</div></div>
+    <div class="tre-grid" id="treLastRow"><div class="tre-row-label">Last bite</div></div>
+    <div class="tre-win-grid" id="treWinRow"><div style="font-size:0.6rem;color:var(--muted);">Window</div></div>
+  </div>
+
+  <!-- Weekly Goals Summary -->
+  <div class="goals-section">
+    <div class="section-label">Weekly Goals</div>
+    <div class="goal-row">
+      <div class="goal-name">Exercise</div>
+      <div class="goal-bar-wrap"><div class="goal-bar-fill" id="barExercise"></div></div>
+      <div class="goal-detail" id="detailExercise"></div>
+      <div class="grade-badge" id="gradeExercise"></div>
+    </div>
+    <div class="goal-row">
+      <div class="goal-name">TRE</div>
+      <div class="goal-bar-wrap"><div class="goal-bar-fill" id="barTRE"></div></div>
+      <div class="goal-detail" id="detailTRE"></div>
+      <div class="grade-badge" id="gradeTRE"></div>
+    </div>
+    <div class="goal-row">
+      <div class="goal-name">Protein</div>
+      <div class="goal-bar-wrap"><div class="goal-bar-fill" id="barProtein"></div></div>
+      <div class="goal-detail" id="detailProtein"></div>
+      <div class="grade-badge" id="gradeProtein"></div>
+    </div>
+    <div class="goal-row">
+      <div class="goal-name">Alcohol</div>
+      <div class="goal-bar-wrap"><div class="goal-bar-fill" id="barAlcohol"></div></div>
+      <div class="goal-detail" id="detailAlcohol"></div>
+      <div class="grade-badge" id="gradeAlcohol"></div>
+    </div>
+    <div class="goal-row">
+      <div class="goal-name">PT</div>
+      <div class="goal-bar-wrap"><div class="goal-bar-fill" id="barPT"></div></div>
+      <div class="goal-detail" id="detailPT"></div>
+      <div class="grade-badge" id="gradePT"></div>
+    </div>
+
+    <div class="overall-row">
+      <div class="overall-label">Overall</div>
+      <div class="overall-bar-wrap"><div class="overall-bar-fill" id="overallBar"></div></div>
+      <div class="overall-grade" id="overallGrade"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">First Bite</div>
+    <div class="modal-sub" id="modalSub"></div>
+    <div class="time-slots" id="timeSlots"></div>
+    <div class="modal-actions">
+      <button class="clear-link" onclick="clearTime()">Clear</button>
+      <button class="modal-btn" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn primary" onclick="confirmTime()">Set</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const DAILY_HABITS  = ['move','exercise','stand','steps','pt'];
+  const WEEKLY_HABITS = { lift:2, zone2:2, hiit:1 };
+  const DAYS_LONG     = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  // 3-state cycles
+  const ALC_STATES  = [null,'none','one','boozer'];
+  const ALC_LABELS  = { none:'0', one:'1', boozer:'2+' };
+  const ALC_SCORE   = { none:1, one:0.5, boozer:0 };
+
+  const PROT_STATES = [null,'met','mid','low'];
+  const PROT_LABELS = { met:'✓', mid:'~', low:'low' };
+  const PROT_SCORE  = { met:1, mid:0.5, low:0 };
+
+  // TRE
+  const TRE_FIRST_GOAL = 10;
+  const TRE_LAST_GOAL  = 19.5;
+  const TRE_WIN_MAX    = 10;
+
+  // Weights for overall grade
+  const WEIGHTS = { exercise:0.30, tre:0.22, protein:0.20, alcohol:0.18, pt:0.10 };
+
+  function makeSlots(startH, endH) {
+    const out=[];
+    for(let h=startH;h<=endH;h++) for(let m=0;m<60;m+=30) {
+      if(h===endH&&m>0) break;
+      const ap=h<12?'am':'pm', h12=h===0?12:h>12?h-12:h, ms=m===0?'00':'30';
+      out.push({label:`${h12}:${ms}${ap}`,val:h+m/60});
+    }
+    return out;
+  }
+  const FIRST_SLOTS = makeSlots(5,13);
+  const LAST_SLOTS  = makeSlots(15,23);
+
+  let weekOffset=0, modalCtx=null, modalSelected=null;
+
+  function getSunday(off=0) {
+    const n=new Date(), s=new Date(n);
+    s.setDate(n.getDate()-n.getDay()+off*7); s.setHours(0,0,0,0); return s;
+  }
+  function weekKey(off) { return `ft_week_${getSunday(off).toISOString().slice(0,10)}`; }
+  function loadWeek() {
+    const raw=localStorage.getItem(weekKey(weekOffset));
+    const d=raw?JSON.parse(raw):{};
+    d.daily=d.daily||{}; d.weekly=d.weekly||{}; d.weight=d.weight||'';
+    d.tre=d.tre||{}; d.alc=d.alc||{}; d.prot=d.prot||{};
+    return d;
+  }
+  function saveWeek(d) { localStorage.setItem(weekKey(weekOffset),JSON.stringify(d)); }
+  function getTodayIdx() {
+    const s=getSunday(weekOffset), t=new Date(); t.setHours(0,0,0,0);
+    const diff=Math.round((t-s)/86400000);
+    return (diff>=0&&diff<=6)?diff:-1;
+  }
+  function isCurWeek() { return weekOffset===0; }
+
+  function render() {
+    const data=loadWeek(), ti=getTodayIdx();
+    const sun=getSunday(weekOffset), sat=new Date(sun); sat.setDate(sun.getDate()+6);
+    const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    document.getElementById('weekLabel').textContent=`${fmt(sun)} – ${fmt(sat)}`;
+    document.getElementById('currentBadge').textContent=isCurWeek()?'this week':'';
+    document.getElementById('prevBtn').disabled=false;
+    document.getElementById('nextBtn').disabled=weekOffset>=0;
+
+    document.querySelectorAll('.day-header[data-col]').forEach(el=>{
+      el.classList.toggle('today',parseInt(el.dataset.col)===ti&&isCurWeek());
+    });
+
+    document.getElementById('weightInput').value=data.weight||'';
+
+    // Daily checkboxes
+    DAILY_HABITS.forEach(h=>{
+      document.querySelectorAll(`.habit-row[data-habit="${h}"] .check-box`).forEach(b=>{
+        const d=parseInt(b.dataset.day);
+        b.classList.toggle('checked',!!(data.daily[h]&&data.daily[h][d]));
+        b.classList.toggle('future',isCurWeek()&&d>ti);
+      });
+    });
+
+    // Alcohol 3-state
+    for(let d=0;d<7;d++){
+      const sp=document.getElementById(`alc-${d}`); if(!sp) continue;
+      const p=sp.parentElement, v=data.alc[d]||null;
+      p.className='tri-cell'+(v?` state-${v==='none'?'good':v==='one'?'mid':'bad'}`:'')+((isCurWeek()&&d>ti)?' future':'');
+      sp.textContent=v?ALC_LABELS[v]:'';
+    }
+
+    // Protein 3-state
+    for(let d=0;d<7;d++){
+      const sp=document.getElementById(`prot-${d}`); if(!sp) continue;
+      const p=sp.parentElement, v=data.prot[d]||null;
+      p.className='tri-cell'+(v?` state-${v==='met'?'good':v==='mid'?'mid':'bad'}`:'')+((isCurWeek()&&d>ti)?' future':'');
+      sp.textContent=v?PROT_LABELS[v]:'';
+    }
+
+    // Weekly tally
+    Object.keys(WEEKLY_HABITS).forEach(h=>{
+      for(let i=0;i<WEEKLY_HABITS[h];i++){
+        const el=document.getElementById(`${h}-${i}`);
+        if(el) el.classList.toggle('filled',(data.weekly[h]||0)>i);
+      }
+    });
+
+    renderTRE(data,ti);
+    updateGoals(data,ti);
+  }
+
+  function renderTRE(data,ti) {
+    const fRow=document.getElementById('treFirstRow');
+    const lRow=document.getElementById('treLastRow');
+    const wRow=document.getElementById('treWinRow');
+    while(fRow.children.length>1) fRow.removeChild(fRow.lastChild);
+    while(lRow.children.length>1) lRow.removeChild(lRow.lastChild);
+    while(wRow.children.length>1) wRow.removeChild(wRow.lastChild);
+    for(let d=0;d<7;d++){
+      const fut=isCurWeek()&&d>ti;
+      const first=data.tre[d]?.first??null;
+      const last=data.tre[d]?.last??null;
+      const fc=document.createElement('div');
+      fc.className='tre-cell'+(fut?' future':'');
+      if(first!==null){ fc.classList.add(first>=TRE_FIRST_GOAL?'tre-good':'tre-bad'); fc.textContent=fmtTime(first); }
+      else fc.textContent='+';
+      if(!fut) fc.addEventListener('click',()=>openModal(d,'first'));
+      fRow.appendChild(fc);
+      const lc=document.createElement('div');
+      lc.className='tre-cell'+(fut?' future':'');
+      if(last!==null){ lc.classList.add(last<=TRE_LAST_GOAL?'tre-good':'tre-bad'); lc.textContent=fmtTime(last); }
+      else lc.textContent='+';
+      if(!fut) lc.addEventListener('click',()=>openModal(d,'last'));
+      lRow.appendChild(lc);
+      const wc=document.createElement('div');
+      wc.className='tre-win-cell';
+      if(first!==null&&last!==null){
+        const win=last-first;
+        wc.classList.add(win<=TRE_WIN_MAX?'good':'bad');
+        wc.textContent=win.toFixed(1)+'h';
+      }
+      wRow.appendChild(wc);
+    }
+  }
+
+  function fmtTime(v) {
+    const h=Math.floor(v), m=Math.round((v-h)*60);
+    const ap=h<12?'am':'pm', h12=h===0?12:h>12?h-12:h;
+    return `${h12}:${m===0?'00':'30'}${ap}`;
+  }
+
+  function updateGoals(data,ti) {
+    const days=isCurWeek()?(ti>=0?ti+1:7):7;
+    const scores={};
+
+    // ── Exercise (30%): 60% daily habits, 40% weekly sessions ──
+    const dailyHabits=['move','exercise','stand','steps'];
+    let dailyDone=0, dailyPossible=days*4;
+    dailyHabits.forEach(h=>{
+      for(let d=0;d<days;d++) if(data.daily[h]&&data.daily[h][d]) dailyDone++;
+    });
+    const dailyPct=dailyPossible>0?dailyDone/dailyPossible:0;
+    const weeklyDone=(data.weekly.lift||0)+(data.weekly.zone2||0)+(data.weekly.hiit||0);
+    const weeklyPct=weeklyDone/5;
+    const exPct=dailyPct*0.6+weeklyPct*0.4;
+    scores.exercise=exPct;
+    setGoal('Exercise',Math.round(exPct*100),100,gradeByPct(exPct),
+      `${dailyDone}/${dailyPossible} habits · ${weeklyDone}/5 sessions`);
+
+    // ── TRE (22%) ──
+    let treDone=0, treLogged=0;
+    for(let d=0;d<days;d++){
+      const t=data.tre[d];
+      if(t&&t.first!=null&&t.last!=null){
+        treLogged++;
+        if(t.first>=TRE_FIRST_GOAL&&t.last<=TRE_LAST_GOAL&&(t.last-t.first)<=TRE_WIN_MAX) treDone++;
+      }
+    }
+    const trePct=treLogged>0?treDone/treLogged:0;
+    scores.tre=trePct;
+    setGoal('TRE',Math.round(trePct*100),100,gradeByPct(trePct),`${treDone}/${treLogged||'–'} days`);
+
+    // ── Protein (20%) ──
+    let protPts=0, protLogged=0;
+    for(let d=0;d<days;d++){
+      const v=data.prot[d]||null;
+      if(v){ protLogged++; protPts+=PROT_SCORE[v]; }
+    }
+    const protPct=protLogged>0?protPts/protLogged:0;
+    scores.protein=protPct;
+    const metDays=Object.values(data.prot).filter(v=>v==='met').length;
+    setGoal('Protein',Math.round(protPct*100),100,gradeByPct(protPct),`${metDays} days on target`);
+
+    // ── Alcohol (18%) ──
+    let alcPts=0, alcLogged=0, totalDrinks=0;
+    for(let d=0;d<7;d++){
+      const v=data.alc[d]||null;
+      if(v){ alcLogged++; alcPts+=ALC_SCORE[v]; }
+      if(v==='one') totalDrinks+=1;
+      else if(v==='boozer') totalDrinks+=2;
+    }
+    const alcPct=alcLogged>0?alcPts/alcLogged:1;
+    scores.alcohol=alcPct;
+    setGoal('Alcohol',Math.round(alcPct*100),100,gradeByPct(alcPct),`${totalDrinks} drink${totalDrinks!==1?'s':''} this wk`);
+
+    // ── PT (10%): 6-7=A, 5=B, 4=C, 3=D ──
+    let ptDone=0;
+    for(let d=0;d<days;d++) if(data.daily.pt&&data.daily.pt[d]) ptDone++;
+    const ptGrade=ptDone>=6?'A':ptDone===5?'B':ptDone===4?'C':ptDone===3?'D':'F';
+    const ptPct=ptDone/7;
+    scores.pt=ptPct;
+    setGoal('PT',Math.round(ptPct*100),100,ptGrade,`${ptDone}/7 days`);
+
+    // ── Overall weighted grade ──
+    const overall=Object.keys(WEIGHTS).reduce((sum,k)=>sum+scores[k]*WEIGHTS[k],0);
+    const overallGrade=gradeByPct(overall);
+    const overallPct=Math.round(overall*100);
+    const overallBar=document.getElementById('overallBar');
+    const overallGradeEl=document.getElementById('overallGrade');
+    overallBar.style.width=overallPct+'%';
+    overallBar.className='overall-bar-fill '+(overallPct>=80?'bar-green':overallPct>=60?'bar-yellow':'bar-red');
+    overallGradeEl.textContent=overallGrade;
+    overallGradeEl.className=`overall-grade grade-${overallGrade}`;
+  }
+
+  function gradeByPct(p) {
+    if(p>=0.9) return 'A'; if(p>=0.8) return 'B';
+    if(p>=0.7) return 'C'; if(p>=0.6) return 'D'; return 'F';
+  }
+
+  function setGoal(name,val,max,grade,detail) {
+    const pct=Math.min(100,Math.round((val/max)*100));
+    const barEl=document.getElementById(`bar${name}`);
+    const grEl=document.getElementById(`grade${name}`);
+    const dtEl=document.getElementById(`detail${name}`);
+    if(!barEl) return;
+    barEl.style.width=pct+'%';
+    barEl.className='goal-bar-fill '+(pct>=80?'bar-green':pct>=60?'bar-yellow':'bar-red');
+    grEl.textContent=grade; grEl.className=`grade-badge grade-${grade}`;
+    if(dtEl) dtEl.textContent=detail||'';
+  }
+
+  // Modal
+  function openModal(day,type) {
+    modalCtx={day,type}; modalSelected=null;
+    const data=loadWeek();
+    const existing=data.tre[day]?.[type]??null;
+    modalSelected=existing;
+    document.getElementById('modalTitle').textContent=type==='first'?'First Bite':'Last Bite';
+    document.getElementById('modalSub').textContent=DAYS_LONG[day];
+    const slots=type==='first'?FIRST_SLOTS:LAST_SLOTS;
+    const cont=document.getElementById('timeSlots'); cont.innerHTML='';
+    slots.forEach(s=>{
+      const el=document.createElement('div');
+      el.className='time-slot'+(existing===s.val?' selected':'');
+      el.textContent=s.label;
+      el.onclick=()=>{ cont.querySelectorAll('.time-slot').forEach(x=>x.classList.remove('selected')); el.classList.add('selected'); modalSelected=s.val; };
+      cont.appendChild(el);
+    });
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); modalCtx=null; modalSelected=null; }
+  function confirmTime() {
+    if(!modalCtx||modalSelected===null) return closeModal();
+    const data=loadWeek();
+    if(!data.tre[modalCtx.day]) data.tre[modalCtx.day]={};
+    data.tre[modalCtx.day][modalCtx.type]=modalSelected;
+    saveWeek(data); closeModal(); render();
+  }
+  function clearTime() {
+    if(!modalCtx) return closeModal();
+    const data=loadWeek();
+    if(data.tre[modalCtx.day]) delete data.tre[modalCtx.day][modalCtx.type];
+    saveWeek(data); closeModal(); render();
+  }
+  document.getElementById('modalOverlay').addEventListener('click',e=>{ if(e.target===document.getElementById('modalOverlay')) closeModal(); });
+
+  // Interactions
+  function toggleDaily(habit,day) {
+    if(isCurWeek()&&day>getTodayIdx()) return;
+    const data=loadWeek();
+    if(!data.daily[habit]) data.daily[habit]={};
+    data.daily[habit][day]=!data.daily[habit][day];
+    saveWeek(data); render();
+  }
+  function cycleAlc(day) {
+    if(isCurWeek()&&day>getTodayIdx()) return;
+    const data=loadWeek();
+    const idx=ALC_STATES.indexOf(data.alc[day]||null);
+    data.alc[day]=ALC_STATES[(idx+1)%ALC_STATES.length];
+    saveWeek(data); render();
+  }
+  function cycleProt(day) {
+    if(isCurWeek()&&day>getTodayIdx()) return;
+    const data=loadWeek();
+    const idx=PROT_STATES.indexOf(data.prot[day]||null);
+    data.prot[day]=PROT_STATES[(idx+1)%PROT_STATES.length];
+    saveWeek(data); render();
+  }
+  function toggleWeekly(habit,idx) {
+    const data=loadWeek(), cur=data.weekly[habit]||0;
+    data.weekly[habit]=cur>idx?idx:idx+1;
+    saveWeek(data); render();
+  }
+  function saveWeight() { const data=loadWeek(); data.weight=document.getElementById('weightInput').value; saveWeek(data); }
+  function changeWeek(dir) { weekOffset+=dir; render(); }
+
+  render();
+</script>
+</body>
+</html>
